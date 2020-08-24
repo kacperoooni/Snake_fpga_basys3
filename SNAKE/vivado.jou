@@ -1,0 +1,15 @@
+#-----------------------------------------------------------
+# Vivado v2017.3 (64-bit)
+# SW Build 2018833 on Wed Oct  4 19:58:22 MDT 2017
+# IP Build 2016188 on Wed Oct  4 21:52:56 MDT 2017
+# Start of session at: Mon Aug 24 14:04:02 2020
+# Process ID: 14244
+# Current directory: C:/Users/kacpe/AppData/Roaming/Xilinx/Vivado
+# Command line: vivado.exe -gui_launcher_event rodinguilauncherevent15112
+# Log file: C:/Users/kacpe/AppData/Roaming/Xilinx/Vivado/vivado.log
+# Journal file: C:/Users/kacpe/AppData/Roaming/Xilinx/Vivado\vivado.jou
+#-----------------------------------------------------------
+start_gui
+open_project C:/Users/kacpe/Documents/SNAKE_BASIC/SNAKE/SNAKE.xpr
+update_compile_order -fileset sources_1
+archive_project C:/Users/kacpe/Github/SNAKE_FPGA/SNAKE.xpr.zip -temp_dir C:/Users/kacpe/AppData/Roaming/Xilinx/Vivado/.Xil/Vivado-14244-DESKTOP-DNFSS87 -force -exclude_run_results

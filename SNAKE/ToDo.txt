@@ -1,0 +1,4 @@
+1.Vga timing 1024x768 - done
+2.grid control - done
+3.grid register - done
+4.rect controller - todo
