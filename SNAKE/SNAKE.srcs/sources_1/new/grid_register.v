@@ -64,9 +64,10 @@ module grid_register(
  
     localparam
         INIT = 0,
-        READnWRITE = 1,
-        RESET = 2;
-    reg [3:0] state = INIT;
+		INIT_2 = 0, //one is too slow 
+        READnWRITE = 2,
+        RESET = 3;
+    reg [3:0] state = INIT_1;
     reg [3:0] state_nxt;
     reg [15:0] register_reseter_comb, register_reseter_seq;
     
@@ -80,12 +81,12 @@ module grid_register(
         case(state)
             INIT:
               begin
-                for(register_reseter_comb = 1; register_reseter_comb <= 768; register_reseter_comb = register_reseter_comb + 1)
+                for(register_reseter_comb = 1; register_reseter_comb <= 660; register_reseter_comb = register_reseter_comb + 1)
                     begin
                     grid_register_nxt[register_reseter_comb] = NULL;
                     end 
                state_nxt = READnWRITE;
-              end   
+              end			  
             READnWRITE:
               begin
                 if (rect_write_y >= 0 && rect_write_y <= 32 && rect_write_x >= 0 && rect_write_x <= 32)
@@ -95,7 +96,7 @@ module grid_register(
                 else begin end 
                 if (rect_read_y >= 0 && rect_read_y <= 32 && rect_read_x >= 0 && rect_read_x <= 32)
                     begin
-                        rect_read_out = grid_register_nxt[rect_read_y*GRID_SIZE_X+rect_read_x];
+                        rect_read_out = grid_register[rect_read_y*GRID_SIZE_X+rect_read_x];
                     end 
 				else begin end
                 if(rst)

@@ -12,7 +12,8 @@ module tester;
   reg clk;
   wire vsync, hsync;
   wire [3:0] r, g, b;
-
+  wire rst_sim;
+  assign rst_sim = 0;
   // Instantiate the vga_example module.
   
   MAIN MAIN (
@@ -21,7 +22,8 @@ module tester;
     .hsync(hsync),
     .r(r),
     .g(g),
-    .b(b)
+    .b(b),
+	.rst(rst_sim)
   );
 
   // Instantiate the tiff_writer module.

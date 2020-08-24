@@ -22,11 +22,20 @@
 
 module rect_controller(
   //  output reg [15:0] rect_write_x, rect_write_y,
-    output reg [15:0] rect_read_x, rect_read_y,
+    output reg [31:0] rect_read_out,
   //  output reg [3:0] rect_write_function,
     output reg [35:0] rect_write,
-    input wire [3:0] rect_read,
-    input wire clk
+    input wire [3:0] rect_read_in,
+    input wire clk,
+	input wire [3:0] key,
+	input wire rst,
+	
+	//DEBUG
+	output reg [3:0] an,  // enable 1-out-of-4 asserted low
+    output reg [6:0] sseg, // led segments
+	input wire [4:0] debug_keys
+	
+	
     );
    localparam 
       GRID_SIZE_X = 32,
@@ -38,48 +47,224 @@ module rect_controller(
       ROCK = 4'b0010,
       SNACK = 4'b0100;
    
-   reg [31:0] i, i_nxt = 0; 
-   reg [15:0] rect_write_x_nxt, rect_write_y_nxt;
+   localparam //states
+	INIT = 0,
+	SNAKE_MOVING = 1,
+	SNAKE_GROW = 2,
+	RESET = 4;
+   
+   localparam //states
+	UP = 4'b0001,
+	DOWN = 4'b0010,
+	LEFT = 4'b0100,
+	RIGHT = 4'b1000;
+	
+	
+	
+   
+   
    reg [15:0] rect_read_x_nxt, rect_read_y_nxt;
-   reg [3:0] rect_write_function_nxt;
+   reg [3:0]  state = INIT;
+   reg [3:0]  state_nxt = INIT;
    reg [35:0] rect_write_nxt;
+   reg [31:0] snake_register [31:0];
+   reg [31:0] snake_register_nxt [31:0];
+   
+   reg [31:0] i_2, i_1; //intertor for smth
+   reg [4:0] snake_writer_iterator, snake_writer_iterator_nxt; //interator for writing snake rects
+   reg [31:0] snake_moving_iterator,snake_moving_iterator_nxt; //interator for moving period of snake
+   
+   
+   reg [15:0] snake_x,snake_y;
+   
+   reg [4:0] snake_size, snake_size_nxt;
+   
+   
+   
+   
+   
+   
   //{rect_write_x,rect_write_y,rect_write_function} = rect_write;
    always@(*)
         begin
-            
-            if(i == 0)
-                begin
-                    rect_write_x_nxt = 1;
-                    rect_write_y_nxt = 1; 
-                    rect_write_function_nxt = SNAKE;
-                    i_nxt = i + 1;
-                end
-            if(i == 1)
-                 begin
-                    rect_write_x_nxt = 2;
-                    rect_write_y_nxt = 2; 
-                    rect_write_function_nxt = ROCK; 
-                    i_nxt = i + 1;
-                 end
-            if(i == 2)
-                  begin
-                  rect_write_x_nxt = 3;
-                  rect_write_y_nxt = 3; 
-                  rect_write_function_nxt = SNACK;  
-                  end
-             rect_write_nxt = {rect_write_x_nxt,rect_write_y_nxt,rect_write_function_nxt};            
-        end     
-   
+			state_nxt = INIT;
+			snake_moving_iterator_nxt = snake_moving_iterator;// + 1;
+			
+			
+
+			
+			case(state)
+				INIT:
+					begin
+						for(i_2 = 0; i_2 <= 31; i_2=i_2+1)
+							begin
+								snake_register_nxt[i_2] = 0;
+							end
+						snake_register_nxt[0] = {16'd15,16'd15};	
+						snake_register_nxt[1] = {16'd16,16'd16};
+						snake_register_nxt[2] = {16'd17,16'd17};
+						snake_size_nxt = 2; // with 0
+						snake_writer_iterator_nxt = 0;
+						snake_moving_iterator_nxt = 0;
+						state_nxt = SNAKE_MOVING;
+					end
+					
+				SNAKE_MOVING:
+					begin
+						if(snake_moving_iterator == 100000000)				
+							begin
+								snake_moving_iterator_nxt = 0;
+								for(i_1 = 0; i_1 < 31; i_1=i_1+1)
+									begin
+										snake_register_nxt[i_1+1] = snake_register[i_1]; //shift snake stack
+									end
+								{snake_x,snake_y} = snake_register[1]; //for control
+								case(key)
+									UP:
+										snake_register_nxt[0] = {snake_x,snake_y+1};
+									LEFT:
+										snake_register_nxt[0] = {snake_x-1,snake_y};
+									RIGHT:
+										snake_register_nxt[0] = {snake_x+1,snake_y+1};	
+									DOWN:
+										snake_register_nxt[0] = {snake_x,snake_y-1};
+									//TO DO DIAGONALS
+									endcase	
+							end
+						
+						if(snake_register[snake_writer_iterator] != 0)
+							begin
+								rect_write_nxt = {snake_register[snake_writer_iterator], SNAKE};
+							end
+					//	if(snake_writer_iterator == snake_size+1)
+					//		begin
+						//		rect_write_nxt = {snake_register[snake_writer_iterator], NULL};
+							//	snake_register_nxt[snake_writer_iterator] = 0;
+						//	end
+						if(snake_writer_iterator == 31) snake_writer_iterator_nxt = 0;
+						else snake_writer_iterator_nxt = snake_writer_iterator + 1;
+						state_nxt = SNAKE_MOVING;	
+					end		
+				SNAKE_GROW:
+					begin
+						snake_size_nxt = snake_size +1;
+						state_nxt = SNAKE_MOVING;
+					end	
+						
+			endcase
+			
+		
+			
+		end
+   			
    always@(posedge clk)
         begin
-       //     rect_write_x <= rect_write_x_nxt;   
-        //    rect_write_y <= rect_write_y_nxt;  
-        //    rect_write_function <= rect_write_function_nxt;
-            rect_write <= rect_write_nxt;
-            i <= i_nxt;
-        end     
-    
-        
+			snake_writer_iterator <= snake_writer_iterator_nxt;
+			snake_moving_iterator <= snake_moving_iterator_nxt;
+			snake_size <= snake_size_nxt;
+			state <= state_nxt;
+			rect_write <= rect_write_nxt;	
+        end
+genvar X;		
+	generate
+			begin
+			for (X = 0; X < 32; X = X+1)		
+				begin
+					always@(posedge clk)
+						begin
+							snake_register[X] <= snake_register_nxt[X];
+						end	
+				end
+			end	
+	endgenerate	 
+	
+	
+	
+     //DEBUG
+	wire [3:0] hex3, hex2, hex1, hex0;  // hex digits
+    wire [3:0] dp_in;             // 4 decimal points
+	wire [31:0] rx;
+	
+	assign rx = snake_register[debug_keys];
+ 	assign {hex3, hex2, hex1, hex0} = {rx[23:16],rx[7:0]};
+
+
+   // constant declaration
+   // refreshing rate around 800 Hz (50 MHz/2^16)
+   localparam N = 18;
+   // internal signal declaration
+   reg [N-1:0] q_reg;
+   wire [N-1:0] q_next;
+   reg [3:0] hex_in;
+   reg dp;
+
+   // N-bit counter
+   // register
+   always @(posedge clk, posedge rst)
+      if (rst)
+         q_reg <= 0;
+      else
+         q_reg <= q_next;
+
+   // next-state logic
+   assign q_next = q_reg + 1;
+
+   // 2 MSBs of counter to control 4-to-1 multiplexing
+   // and to generate active-low enable signal
+   always @*
+      case (q_reg[N-1:N-2])
+         2'b00:
+            begin
+               an =  4'b1110;
+               hex_in = hex0;
+               dp = dp_in[0];
+            end
+         2'b01:
+            begin
+               an =  4'b1101;
+               hex_in = hex1;
+               dp = dp_in[1];
+            end
+         2'b10:
+            begin
+               an =  4'b1011;
+               hex_in = hex2;
+               dp = dp_in[2];
+            end
+         default:
+            begin
+               an =  4'b0111;
+               hex_in = hex3;
+               dp = dp_in[3];
+            end
+       endcase
+
+   // hex to seven-segment led display
+   always @*
+   begin
+      case(hex_in)
+         4'h0: sseg[6:0] = 7'b0000001;
+         4'h1: sseg[6:0] = 7'b1001111;
+         4'h2: sseg[6:0] = 7'b0010010;
+         4'h3: sseg[6:0] = 7'b0000110;
+         4'h4: sseg[6:0] = 7'b1001100;
+         4'h5: sseg[6:0] = 7'b0100100;
+         4'h6: sseg[6:0] = 7'b0100000;
+         4'h7: sseg[6:0] = 7'b0001111;
+         4'h8: sseg[6:0] = 7'b0000000;
+         4'h9: sseg[6:0] = 7'b0000100;
+         4'ha: sseg[6:0] = 7'b0001000;
+         4'hb: sseg[6:0] = 7'b1100000;
+         4'hc: sseg[6:0] = 7'b0110001;
+         4'hd: sseg[6:0] = 7'b1000010;
+         4'he: sseg[6:0] = 7'b0110000;
+         default: sseg[6:0] = 7'b0111000;  //4'hf
+     endcase
+     sseg[7] = dp;
+   end
+
+
+	 
     
     
    

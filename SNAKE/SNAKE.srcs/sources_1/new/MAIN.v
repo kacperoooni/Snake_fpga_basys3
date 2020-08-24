@@ -27,9 +27,13 @@ module MAIN(
     output wire [3:0] g,
     output wire [3:0] b,
     output wire vsync,
-    output wire hsync
+    output wire hsync,
+	input wire [3:0] key,
+		//debug
+	input wire [4:0] sw,
+	output wire [6:0] sseg,
+	output wire [3:0] an
     );
-
     wire clk_100Mhz, clk_65Mhz;
     
     
@@ -71,11 +75,14 @@ module MAIN(
        .vblnk_in(vblnk_wire),
        .rgb_out(rgb_RGB_to_grid),
        .vcount_out(vcount_wire_RGB_to_grid),
-       .hcount_out(hcount_wire_RGB_to_grid)     
+       .hcount_out(hcount_wire_RGB_to_grid),
+	   .rst(rst)
       );
     
-    wire [15:0] rect_write_x,rect_write_y,rect_read_x,rect_read_y;
-    wire [3:0] rect_write_function,rect_read;
+    wire [31:0] rect_read_wire;
+	wire [3:0] rect_read_function_wire;
+    wire [3:0] rect_write_function;
+	wire [31:0] rect_read;
     wire [35:0] rect_write_wire;
     grid_register grid_register (
        .clk(clk_65Mhz),
@@ -86,21 +93,22 @@ module MAIN(
        .rst(rst),
     //   .rect_write_x(rect_write_x),
      //  .rect_write_y(rect_write_y),
-       .rect_read_x(rect_read_x),
-       .rect_read_y(rect_read_y),
+       .rect_read_in(rect_read_wire),
     //   .rect_write_function(rect_write_function),
-        .rect_write(rect_write_wire),
-       .rect_read(rect_read)
+       .rect_write(rect_write_wire),
+       .rect_read_out(rect_read_function_wire)
        );
     
     rect_controller rect_controller (
        .clk(clk_65Mhz),
-    //   .rect_write_x(rect_write_x),
-     //  .rect_write_y(rect_write_y),
-     //  .rect_read_x(rect_read_x),
-    //   .rect_read_y(rect_read_y),
-    //   .rect_write_function(rect_write_function),
+	   .key(key),
        .rect_write(rect_write_wire),
-       .rect_read(rect_read)
+       .rect_read_out(rect_read),
+	   .rst(rst),
+	   .rect_read_in(rect_read_function_wire),
+	   //debug
+	   .debug_keys(sw),
+	   .sseg(sseg),
+	   .an(an)
        );            
 endmodule
