@@ -3,7 +3,6 @@ Copyright 1986-1999, 2001-2016 Xilinx, Inc. All Rights Reserved.
 Running: D:/Uczelnia/Vivado/Vivado/2017.3/bin/unwrapped/win64.o/xelab.exe -wto c3955181433344529bb5491a54470154 --incr --debug typical --relax --mt 2 -L xil_defaultlib -L unisims_ver -L unimacro_ver -L secureip -L xpm --snapshot tester_behav xil_defaultlib.tester xil_defaultlib.glbl -log elaborate.log 
 Using 2 slave threads.
 Starting static elaboration
-WARNING: [VRFC 10-278] actual bit length 4 differs from formal bit length 32 for port rect_read_out [C:/Users/kacpe/Github/SNAKE_FPGA/SNAKE/SNAKE.srcs/sources_1/new/MAIN.v:104]
 WARNING: [VRFC 10-1783] select index 7 into sseg is out of bounds [C:/Users/kacpe/Github/SNAKE_FPGA/SNAKE/SNAKE.srcs/sources_1/new/rect_controller.v:263]
 Completed static elaboration
 Starting simulation data flow analysis

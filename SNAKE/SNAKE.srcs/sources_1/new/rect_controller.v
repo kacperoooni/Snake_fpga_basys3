@@ -54,8 +54,8 @@ module rect_controller(
 	RESET = 4;
    
    localparam //states
-	UP = 4'b0001,
-	DOWN = 4'b0010,
+	UP = 4'b0010,
+	DOWN = 4'b0001,
 	LEFT = 4'b0100,
 	RIGHT = 4'b1000;
 	
@@ -70,13 +70,14 @@ module rect_controller(
    reg [31:0] snake_register [31:0];
    reg [31:0] snake_register_nxt [31:0];
    
-   reg [31:0] i_2, i_1; //intertor for smth
+   reg [31:0] i; //intertor for smth
    reg [4:0] snake_writer_iterator, snake_writer_iterator_nxt; //interator for writing snake rects
    reg [31:0] snake_moving_iterator,snake_moving_iterator_nxt; //interator for moving period of snake
    
    
    reg [15:0] snake_x,snake_y;
-   
+  // {snake_x,snake_y} = snake_register[0];
+   reg [3:0] key_latch, key_latch_nxt;
    reg [4:0] snake_size, snake_size_nxt;
    
    
@@ -88,46 +89,68 @@ module rect_controller(
    always@(*)
         begin
 			state_nxt = INIT;
-			snake_moving_iterator_nxt = snake_moving_iterator;// + 1;
-			
-			
+			snake_moving_iterator_nxt = snake_moving_iterator + 1;
+			snake_writer_iterator_nxt = snake_writer_iterator;
+			snake_size_nxt = snake_size;
+			rect_write_nxt = rect_write; //WARNING!! CAN CAUSE UNEXPECTED WRITE TO MEMORY
+			for(i = 0; i <= 31; i=i+1)
+				begin
+					snake_register_nxt[i] = snake_register[i];
+				end
+			if(key == 0)
+				begin
+					key_latch_nxt = key_latch;
+				end
+			else
+				begin
+					key_latch_nxt = key;
+				end	
 
 			
 			case(state)
 				INIT:
 					begin
-						for(i_2 = 0; i_2 <= 31; i_2=i_2+1)
+						for(i = 0; i <= 31; i=i+1)
 							begin
-								snake_register_nxt[i_2] = 0;
+								snake_register_nxt[i] = 0;
 							end
 						snake_register_nxt[0] = {16'd15,16'd15};	
-						snake_register_nxt[1] = {16'd16,16'd16};
-						snake_register_nxt[2] = {16'd17,16'd17};
-						snake_size_nxt = 2; // with 0
+						snake_register_nxt[1] = {16'd16,16'd15};
+						snake_register_nxt[2] = {16'd17,16'd15};
+						snake_register_nxt[3] = {16'd18,16'd15};
+						snake_size_nxt = 3; // with 0
 						snake_writer_iterator_nxt = 0;
 						snake_moving_iterator_nxt = 0;
 						state_nxt = SNAKE_MOVING;
+						key_latch_nxt = LEFT;
 					end
 					
 				SNAKE_MOVING:
 					begin
-						if(snake_moving_iterator == 100000000)				
+						if(snake_moving_iterator == 50000000)				
 							begin
 								snake_moving_iterator_nxt = 0;
-								for(i_1 = 0; i_1 < 31; i_1=i_1+1)
+								for(i = 0; i < 31; i=i+1)
 									begin
-										snake_register_nxt[i_1+1] = snake_register[i_1]; //shift snake stack
+										snake_register_nxt[i+1] = snake_register[i]; //shift snake stack
 									end
-								{snake_x,snake_y} = snake_register[1]; //for control
-								case(key)
+								case(key_latch)
 									UP:
-										snake_register_nxt[0] = {snake_x,snake_y+1};
+										begin
+											snake_register_nxt[0] = {snake_register[0][31:16],snake_register[0][15:0]+16'd1};
+										end	
 									LEFT:
-										snake_register_nxt[0] = {snake_x-1,snake_y};
+										begin
+											snake_register_nxt[0] = {snake_register[0][31:16]-16'd1,snake_register[0][15:0]};
+										end	
 									RIGHT:
-										snake_register_nxt[0] = {snake_x+1,snake_y+1};	
+										begin
+											snake_register_nxt[0] = {snake_register[0][31:16]+16'd1,snake_register[0][15:0]};
+										end			
 									DOWN:
-										snake_register_nxt[0] = {snake_x,snake_y-1};
+										begin
+											snake_register_nxt[0] = {snake_register[0][31:16],snake_register[0][15:0]-16'd1};
+										end	
 									//TO DO DIAGONALS
 									endcase	
 							end
@@ -136,18 +159,21 @@ module rect_controller(
 							begin
 								rect_write_nxt = {snake_register[snake_writer_iterator], SNAKE};
 							end
-					//	if(snake_writer_iterator == snake_size+1)
-					//		begin
-						//		rect_write_nxt = {snake_register[snake_writer_iterator], NULL};
-							//	snake_register_nxt[snake_writer_iterator] = 0;
-						//	end
-						if(snake_writer_iterator == 31) snake_writer_iterator_nxt = 0;
-						else snake_writer_iterator_nxt = snake_writer_iterator + 1;
-						state_nxt = SNAKE_MOVING;	
+						if(snake_writer_iterator == snake_size+5'd1)
+							begin
+								rect_write_nxt = {snake_register[snake_writer_iterator], NULL};
+								snake_register_nxt[snake_writer_iterator] = 0;
+							end
+						if(snake_writer_iterator == 5'd31) snake_writer_iterator_nxt = 0;
+						else snake_writer_iterator_nxt = snake_writer_iterator + 5'd1;
+						
+						
+						
+						if(rst)state_nxt = INIT; else state_nxt = SNAKE_MOVING;	
 					end		
 				SNAKE_GROW:
 					begin
-						snake_size_nxt = snake_size +1;
+						snake_size_nxt = snake_size + 5'd1;
 						state_nxt = SNAKE_MOVING;
 					end	
 						
@@ -163,7 +189,8 @@ module rect_controller(
 			snake_moving_iterator <= snake_moving_iterator_nxt;
 			snake_size <= snake_size_nxt;
 			state <= state_nxt;
-			rect_write <= rect_write_nxt;	
+			rect_write <= rect_write_nxt;
+			key_latch <= key_latch_nxt;	
         end
 genvar X;		
 	generate
@@ -260,7 +287,6 @@ genvar X;
          4'he: sseg[6:0] = 7'b0110000;
          default: sseg[6:0] = 7'b0111000;  //4'hf
      endcase
-     sseg[7] = dp;
    end
 
 
