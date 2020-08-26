@@ -14,6 +14,8 @@ module tester;
   wire [3:0] r, g, b;
   wire rst_sim;
   assign rst_sim = 0;
+  reg [3:0] key = 4'b0100; 
+ 
   // Instantiate the vga_example module.
   
   MAIN MAIN (
@@ -23,7 +25,8 @@ module tester;
     .r(r),
     .g(g),
     .b(b),
-	.rst(rst_sim)
+	.rst(rst_sim),
+	.key(key)
   );
 
   // Instantiate the tiff_writer module.

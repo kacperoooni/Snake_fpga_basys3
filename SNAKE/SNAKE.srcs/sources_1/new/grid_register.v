@@ -25,6 +25,12 @@ module grid_register(
     input wire rst,
     input wire [15:0] vcount,
     input wire [15:0] hcount,
+    output reg [15:0] vcount_out,
+    output reg [15:0] hcount_out,
+    
+    input wire hsync_in,vsync_in,
+    output reg hsync_out,vsync_out,
+    
     input wire [31:0] rect_read_in, //Xpos,Ypox
     input wire [35:0] rect_write, //Xpos,Ypos,Function
     output reg [3:0] rect_read_out, //Function
@@ -77,30 +83,29 @@ module grid_register(
         begin
         rgb_nxt = rgb_in;
         state_nxt = state;
-	//	if(seq_iterator == 768) seq_iterator_nxt = 0; 
-	//	else seq_iterator_nxt = seq_iterator + 1; 
-    	for (comb_iterator = 1; comb_iterator < 769; comb_iterator = comb_iterator +1) grid_register_nxt[comb_iterator] = grid_register[comb_iterator];	
-        case(state)
-            INIT:
-              begin
-                    for(comb_iterator = 1; comb_iterator <= 768; comb_iterator = comb_iterator + 1) 
-					begin
-						grid_register_nxt[comb_iterator] = NULL;
-					end	
-		//		seq_iterator_nxt = 1;
-				state_nxt = READnWRITE;
-              end			  
+    			for (comb_iterator = 1; comb_iterator < 769; comb_iterator = comb_iterator +1) 
+    				grid_register_nxt[comb_iterator] = grid_register[comb_iterator];	
+        		case(state)
+           		 INIT:
+              		begin
+                		for(comb_iterator = 1; comb_iterator <= 768; comb_iterator = comb_iterator + 1) 
+											begin
+												grid_register_nxt[comb_iterator] = NULL;
+											end	
+
+												state_nxt = READnWRITE;
+             			 end			  
             READnWRITE:
-              begin
-                if (rect_write_y >= 0 && rect_write_y <= 32 && rect_write_x >= 0 && rect_write_x <= 32) grid_register_nxt[rect_write_y*GRID_SIZE_X+rect_write_x] = rect_write_function;
-                if (rect_read_y >= 0 && rect_read_y <= 32 && rect_read_x >= 0 && rect_read_x <= 32) 	rect_read_out = grid_register[rect_read_y*GRID_SIZE_X+rect_read_x];
-                if (rst) state_nxt = RESET;
-                else state_nxt = READnWRITE;                  
-               end
+         			    begin
+             				if (rect_write_y >= 0 && rect_write_y <= 32 && rect_write_x >= 0 && rect_write_x <= 32) grid_register_nxt[rect_write_y*GRID_SIZE_X+rect_write_x] = rect_write_function;
+               		  if (rect_read_y >= 0 && rect_read_y <= 32 && rect_read_x >= 0 && rect_read_x <= 32) 	rect_read_out = grid_register[rect_read_y*GRID_SIZE_X+rect_read_x];
+              			if (rst) state_nxt = RESET;
+              		  else state_nxt = READnWRITE;                  
+               		end
             RESET:
-                begin        
+               	  begin        
                     state_nxt = INIT;
-                end
+                  end
 			default:
 				begin
 					state_nxt = INIT;
@@ -139,6 +144,10 @@ module grid_register(
         begin
             state <= state_nxt;
             rgb_out <= rgb_nxt;
+            hsync_out <= hsync_in;
+            vsync_out <= vsync_in;
+            vcount_out <= vcount;
+            hcount_out <= hcount;
 	//		seq_iterator <= seq_iterator_nxt;
 	//		grid_register[seq_iterator] <= grid_register_nxt[seq_iterator];
 			

@@ -63,13 +63,15 @@ module MAIN(
      );
      wire [15:0] vcount_wire_RGB_to_grid, hcount_wire_RGB_to_grid;
      wire [11:0] rgb_RGB_to_grid;
+     wire hsync_rgb_controller_grid_register,vsync_rgb_controller_grid_register;
+     
     VGA_rgb_controller VGA_rgb_controller (
        .clk(clk_65Mhz),
        .hcount_in(hcount_wire),
        .hsync_in(hsync_wire),
        .vsync_in(vsync_wire),
-       .hsync_out(hsync),
-       .vsync_out(vsync),
+       .hsync_out(hsync_rgb_controller_grid_register),
+       .vsync_out(vsync_rgb_controller_grid_register),
        .hblnk_in(hblnk_wire),
        .vcount_in(vcount_wire),
        .vblnk_in(vblnk_wire),
@@ -80,35 +82,57 @@ module MAIN(
       );
     
     wire [31:0] rect_read_wire;
-	wire [3:0] rect_read_function_wire;
+		wire [3:0] rect_read_function_wire;
     wire [3:0] rect_write_function;
-	wire [31:0] rect_read;
+		wire [31:0] rect_read;
     wire [35:0] rect_write_wire;
+    wire hsync_grid_register_grid_edges,vsync_grid_register_grid_edges;
+    wire [11:0] rgb_grid_register_grid_edges;
+    wire [15:0] vcount_grid_register_grid_edges,hcount_grid_register_grid_edges;
+    
     grid_register grid_register (
        .clk(clk_65Mhz),
-       .rgb_out({r,g,b}),
+       .rgb_out(rgb_grid_register_grid_edges),
        .vcount(vcount_wire_RGB_to_grid),
        .hcount(hcount_wire_RGB_to_grid),
+       .hcount_out(hcount_grid_register_grid_edges),
+       .vcount_out(vcount_grid_register_grid_edges),
        .rgb_in(rgb_RGB_to_grid),
        .rst(rst),
-    //   .rect_write_x(rect_write_x),
-     //  .rect_write_y(rect_write_y),
        .rect_read_in(rect_read_wire),
-    //   .rect_write_function(rect_write_function),
        .rect_write(rect_write_wire),
-       .rect_read_out(rect_read_function_wire)
+       .rect_read_out(rect_read_function_wire),
+       .hsync_in(hsync_rgb_controller_grid_register),
+       .vsync_in(vsync_rgb_controller_grid_register),
+       .hsync_out(hsync_grid_register_grid_edges),
+       .vsync_out(vsync_grid_register_grid_edges)
        );
     
     rect_controller rect_controller (
        .clk(clk_65Mhz),
-	   .key(key),
+	     .key(key),
        .rect_write(rect_write_wire),
        .rect_read_out(rect_read),
-	   .rst(rst),
-	   .rect_read_in(rect_read_function_wire),
+	     .rst(rst),
+	     .rect_read_in(rect_read_function_wire),
 	   //debug
-	   .debug_keys(sw),
-	   .sseg(sseg),
-	   .an(an)
-       );            
+	     .debug_keys(sw),
+	     .sseg(sseg),
+	     .an(an)
+       );  
+       
+       
+    grid_edges grid_edges (
+    .vcount_in(vcount_grid_register_grid_edges),
+    .hcount_in(hcount_grid_register_grid_edges),
+    .rgb_in(rgb_grid_register_grid_edges),
+    .rgb_out({r,g,b}),
+    .clk(clk),
+    .hsync_in(hsync_grid_register_grid_edges),
+    .vsync_in(vsync_grid_register_grid_edges),
+    .vsync_out(vsync),
+    .hsync_out(hsync)	
+    );   
+       
+                 
 endmodule

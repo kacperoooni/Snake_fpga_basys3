@@ -159,14 +159,23 @@ module rect_controller(
 							begin
 								rect_write_nxt = {snake_register[snake_writer_iterator], SNAKE};
 							end
+					
 						if(snake_writer_iterator == snake_size+5'd1)
 							begin
 								rect_write_nxt = {snake_register[snake_writer_iterator], NULL};
-								snake_register_nxt[snake_writer_iterator] = 0;
-							end
+				//				rect_write_nxt = {snake_register[snake_writer_iterator+5'd1], NULL};
+								snake_register_nxt[snake_writer_iterator+5'd1] = 0;
+							end	
+						
+
+						
+						
+						
+						
+						
+								
 						if(snake_writer_iterator == 5'd31) snake_writer_iterator_nxt = 0;
 						else snake_writer_iterator_nxt = snake_writer_iterator + 5'd1;
-						
 						
 						
 						if(rst)state_nxt = INIT; else state_nxt = SNAKE_MOVING;	
