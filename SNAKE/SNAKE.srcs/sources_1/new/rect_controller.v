@@ -21,19 +21,19 @@
 
 
 module rect_controller(
-  //  output reg [15:0] rect_write_x, rect_write_y,
     output reg [31:0] rect_read_out,
-  //  output reg [3:0] rect_write_function,
     output reg [35:0] rect_write,
     input wire [3:0] rect_read_in,
     input wire clk,
-	input wire [3:0] key,
-	input wire rst,
+		input wire [3:0] key,
+		input wire rst,
+		
+		
 	
 	//DEBUG
-	output reg [3:0] an,  // enable 1-out-of-4 asserted low
+		output reg [3:0] an,  // enable 1-out-of-4 asserted low
     output reg [6:0] sseg, // led segments
-	input wire [4:0] debug_keys
+		input wire [4:0] debug_keys
 	
 	
     );
@@ -51,7 +51,10 @@ module rect_controller(
 	INIT = 0,
 	SNAKE_MOVING = 1,
 	SNAKE_GROW = 2,
-	RESET = 4;
+	RESET = 3,
+	GAME_OVER = 4,
+	SNAKE_DRAWING = 5,
+	COLLISION_CHECK = 6;
    
    localparam //states
 	UP = 4'b0010,
@@ -79,6 +82,7 @@ module rect_controller(
   // {snake_x,snake_y} = snake_register[0];
    reg [3:0] key_latch, key_latch_nxt;
    reg [4:0] snake_size, snake_size_nxt;
+   reg [31:0] previous_read_rect;
    
    
    
@@ -87,12 +91,13 @@ module rect_controller(
    
   //{rect_write_x,rect_write_y,rect_write_function} = rect_write;
    always@(*)
-        begin
+     begin
 			state_nxt = INIT;
 			snake_moving_iterator_nxt = snake_moving_iterator + 1;
 			snake_writer_iterator_nxt = snake_writer_iterator;
 			snake_size_nxt = snake_size;
 			rect_write_nxt = rect_write; //WARNING!! CAN CAUSE UNEXPECTED WRITE TO MEMORY
+			rect_read_out = snake_register[0];
 			for(i = 0; i <= 31; i=i+1)
 				begin
 					snake_register_nxt[i] = snake_register[i];
@@ -127,65 +132,79 @@ module rect_controller(
 					
 				SNAKE_MOVING:
 					begin
-						if(snake_moving_iterator == 50000000)				
-							begin
-								snake_moving_iterator_nxt = 0;
-								for(i = 0; i < 31; i=i+1)
+						state_nxt = COLLISION_CHECK;	
+						snake_moving_iterator_nxt = 0;
+							for(i = 0; i < 31; i=i+1)
+								begin
+									snake_register_nxt[i+1] = snake_register[i]; //shift snake stack
+								end
+							case(key_latch)
+								UP:
 									begin
-										snake_register_nxt[i+1] = snake_register[i]; //shift snake stack
-									end
-								case(key_latch)
-									UP:
-										begin
-											snake_register_nxt[0] = {snake_register[0][31:16],snake_register[0][15:0]+16'd1};
-										end	
-									LEFT:
-										begin
-											snake_register_nxt[0] = {snake_register[0][31:16]-16'd1,snake_register[0][15:0]};
-										end	
-									RIGHT:
-										begin
-											snake_register_nxt[0] = {snake_register[0][31:16]+16'd1,snake_register[0][15:0]};
-										end			
-									DOWN:
-										begin
-											snake_register_nxt[0] = {snake_register[0][31:16],snake_register[0][15:0]-16'd1};
-										end	
-									//TO DO DIAGONALS
-									endcase	
-							end
+										snake_register_nxt[0] = {snake_register[0][31:16],snake_register[0][15:0]+16'd1};
+									end	
+								LEFT:
+									begin
+										snake_register_nxt[0] = {snake_register[0][31:16]-16'd1,snake_register[0][15:0]};
+									end	
+								RIGHT:
+									begin
+										snake_register_nxt[0] = {snake_register[0][31:16]+16'd1,snake_register[0][15:0]};
+									end			
+								DOWN:
+									begin
+										snake_register_nxt[0] = {snake_register[0][31:16],snake_register[0][15:0]-16'd1};
+									end	
+								//TO DO DIAGONALS
+							endcase
+					end	
 						
-						if(snake_register[snake_writer_iterator] != 0)
-							begin
+					SNAKE_DRAWING:
+						begin
+							if(snake_moving_iterator == 50000000)	state_nxt = SNAKE_MOVING;
+							else if(rst) state_nxt = INIT;
+							else state_nxt = SNAKE_DRAWING; 	
+							
+							if(snake_register[snake_writer_iterator] != 0)
 								rect_write_nxt = {snake_register[snake_writer_iterator], SNAKE};
-							end
-					
-						if(snake_writer_iterator == snake_size+5'd1)
-							begin
-								rect_write_nxt = {snake_register[snake_writer_iterator], NULL};
-				//				rect_write_nxt = {snake_register[snake_writer_iterator+5'd1], NULL};
-								snake_register_nxt[snake_writer_iterator+5'd1] = 0;
-							end	
-						
-
-						
-						
-						
-						
-						
+						  if(snake_writer_iterator == snake_size+5'd1)
+								begin
+									rect_write_nxt = {snake_register[snake_writer_iterator], NULL};
+									snake_register_nxt[snake_writer_iterator+5'd1] = 0;
+								end	
+			
+							if(snake_writer_iterator == 5'd31) snake_writer_iterator_nxt = 0;
+							else snake_writer_iterator_nxt = snake_writer_iterator + 5'd1;
 								
-						if(snake_writer_iterator == 5'd31) snake_writer_iterator_nxt = 0;
-						else snake_writer_iterator_nxt = snake_writer_iterator + 5'd1;
+								
+						end
 						
-						
-						if(rst)state_nxt = INIT; else state_nxt = SNAKE_MOVING;	
-					end		
+				COLLISION_CHECK:		
+						begin
+							case(rect_read_in)
+								SNAKE:
+									state_nxt = GAME_OVER;
+								SNACK:
+									state_nxt = SNAKE_GROW;
+								ROCK:
+									state_nxt = GAME_OVER;
+								default:
+									state_nxt = SNAKE_DRAWING;			
+							endcase
+						end								
 				SNAKE_GROW:
 					begin
 						snake_size_nxt = snake_size + 5'd1;
-						state_nxt = SNAKE_MOVING;
+						state_nxt = SNAKE_DRAWING;
+						snake_writer_iterator_nxt = 0;
 					end	
-						
+				GAME_OVER:	
+					begin
+						if(rst) state_nxt = INIT;
+						else state_nxt = GAME_OVER;
+					end
+				//SNACK_GENERATE:		
+				//TODO		
 			endcase
 			
 		

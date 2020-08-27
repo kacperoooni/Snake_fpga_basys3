@@ -71,7 +71,8 @@ module grid_register(
     localparam
         INIT = 1'b0,  
         READnWRITE = 1,
-        RESET = 2;
+        RESET = 2,
+        ARENA_GENERATOR = 3;
     reg [3:0] state = INIT;
     reg [3:0] state_nxt;
     reg [15:0] register_reseter_comb, register_reseter_seq;
@@ -83,62 +84,77 @@ module grid_register(
         begin
         rgb_nxt = rgb_in;
         state_nxt = state;
+        rect_read_out = 0;
     			for (comb_iterator = 1; comb_iterator < 769; comb_iterator = comb_iterator +1) 
     				grid_register_nxt[comb_iterator] = grid_register[comb_iterator];	
         		case(state)
            		 INIT:
               		begin
+              			state_nxt = ARENA_GENERATOR;
                 		for(comb_iterator = 1; comb_iterator <= 768; comb_iterator = comb_iterator + 1) 
 											begin
-												grid_register_nxt[comb_iterator] = NULL;
+												grid_register_nxt[comb_iterator] = NULL;  //GRID RESET
+											end
+									end			
+							ARENA_GENERATOR:
+									begin
+										state_nxt = READnWRITE;				
+												grid_register_nxt[2*GRID_SIZE_X+3] = SNACK;
+										for(comb_iterator = 1; comb_iterator <= 32; comb_iterator = comb_iterator + 1) 
+											begin
+												grid_register_nxt[comb_iterator] = ROCK;
+												grid_register_nxt[23*GRID_SIZE_X+comb_iterator] = ROCK;
+											end			
+										for(comb_iterator = 1; comb_iterator <= 24; comb_iterator = comb_iterator + 1) 
+											begin
+												grid_register_nxt[1+comb_iterator*32] = ROCK;
+												grid_register_nxt[32+comb_iterator*32] = ROCK;
 											end	
-
-												state_nxt = READnWRITE;
-             			 end			  
-            READnWRITE:
+													
+             			end			  
+            		READnWRITE:
          			    begin
              				if (rect_write_y >= 0 && rect_write_y <= 32 && rect_write_x >= 0 && rect_write_x <= 32) grid_register_nxt[rect_write_y*GRID_SIZE_X+rect_write_x] = rect_write_function;
                		  if (rect_read_y >= 0 && rect_read_y <= 32 && rect_read_x >= 0 && rect_read_x <= 32) 	rect_read_out = grid_register[rect_read_y*GRID_SIZE_X+rect_read_x];
               			if (rst) state_nxt = RESET;
               		  else state_nxt = READnWRITE;                  
                		end
-            RESET:
+            		RESET:
                	  begin        
                     state_nxt = INIT;
                   end
-			default:
-				begin
-					state_nxt = INIT;
-				end	
-        endcase        
-
+								default:
+									begin
+										state_nxt = INIT;
+									end	
+        		endcase        
             if(vcount >= 0 && vcount <= 768 && hcount >= 0 && hcount <= 1024)
+             begin
+               current_painted_rect = vcount/RECT_SIZE_Y*RECT_SIZE_X+hcount/RECT_SIZE_X+1;
+               case(grid_register[current_painted_rect])
+                  NULL:
                     begin
-                        current_painted_rect = vcount/RECT_SIZE_Y*RECT_SIZE_X+hcount/RECT_SIZE_X+1;
-                        case(grid_register[current_painted_rect])
-                                   NULL:
-                                       begin
-                                       rgb_nxt = rgb_in;
-                                       end
-                                   SNAKE:
-                                       begin
-                                       rgb_nxt = 12'h0_f_0;
-                                       end
-                                   ROCK:
-                                       begin
-                                       rgb_nxt = 12'hf_f_f;
-                                       end
-                                   SNACK:
-                                       begin
-                                       rgb_nxt = 12'hf_0_0;
-                                       end 
-                                   default:
-                                       begin  
-                                       rgb_nxt = rgb_in;
-                                       end           
-                               endcase
+                      rgb_nxt = rgb_in;
                     end
-            end    
+                  SNAKE:
+                    begin
+                      rgb_nxt = 12'h0_f_0;
+                    end
+                  ROCK:
+                    begin
+                      rgb_nxt = 12'h2_2_2;
+                    end
+                  SNACK:
+                     begin
+                      rgb_nxt = 12'hf_0_0;
+                     end 
+                  default:
+                     begin  
+                      rgb_nxt = rgb_in;
+                     end           
+               endcase
+             end
+        end    
     
     always@(posedge clk)
         begin

@@ -99,7 +99,7 @@ module MAIN(
        .vcount_out(vcount_grid_register_grid_edges),
        .rgb_in(rgb_RGB_to_grid),
        .rst(rst),
-       .rect_read_in(rect_read_wire),
+       .rect_read_in(rect_read),
        .rect_write(rect_write_wire),
        .rect_read_out(rect_read_function_wire),
        .hsync_in(hsync_rgb_controller_grid_register),
